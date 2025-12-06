@@ -1,0 +1,44 @@
+gitlabUrl: "https://gitlab.credencys.net"
+runnerRegistrationToken: "glrt-dkyJ6c76DCdwHphi3X7FM286MQpwOjM3CnQ6Mwp1OjJ4EQ.01.1a11z66jh"
+
+rbac:
+  create: true
+
+runners:
+  name: "nonprod-infra"
+  tags:
+    - "nonprod-infra"
+  runUntagged: false
+  locked: false
+  executor: "kubernetes"
+
+  # Kubernetes executor section
+  kubernetes:
+    image: "alpine:latest"
+    privileged: true
+    pollTimeout: 300
+    namespace: gitlab-runner
+    # Some chart versions accept helper_image in this nested kubernetes section
+    helper_image: "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:arm64-v18.6.2"
+    pullPolicy: IfNotPresent
+
+  ## Optional: resource requests/limits for the runner pods
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"
+
+  ## Explicit helperImage stanza used by modern charts (preferred)
+  helperImage:
+    name: "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper"
+    tag: "arm64-v18.6.2"
+
+## concurrency for jobs
+concurrent: 5
+
+## If your cluster needs imagePullSecrets (private registries) uncomment and set correctly
+# imagePullSecrets:
+#   - name: my-registry-secret

@@ -1,0 +1,61 @@
+############################################
+# KMS CMK for CloudTrail log encryption
+############################################
+data "aws_partition" "current" {}
+
+data "aws_iam_policy_document" "cloudtrail_kms_policy" {
+  statement {
+    sid     = "EnableRootPermissions"
+    effect  = "Allow"
+
+    principals {
+      type        = "AWS"
+      identifiers = ["arn:${data.aws_partition.current.partition}:iam::${data.aws_caller_identity.current.account_id}:root"]
+    }
+
+    actions   = ["kms:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowCloudTrailUseOfTheKey"
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:DescribeKey"
+    ]
+    resources = ["*"]
+
+    # Scope to this account’s trail ARN (name must match your aws_cloudtrail.this name)
+    condition {
+      test     = "StringEquals"
+      variable = "kms:EncryptionContext:aws:cloudtrail:arn"
+      values = [
+        "arn:${data.aws_partition.current.partition}:cloudtrail:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trail/${var.name_prefix}-trail"
+      ]
+    }
+  }
+}
+
+resource "aws_kms_key" "cloudtrail" {
+  description             = "CMK for CloudTrail log file encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.cloudtrail_kms_policy.json
+  tags                    = local.tags
+}
+
+resource "aws_kms_alias" "cloudtrail" {
+  name          = "alias/${var.name_prefix}/cloudtrail"
+  target_key_id = aws_kms_key.cloudtrail.key_id
+}
+

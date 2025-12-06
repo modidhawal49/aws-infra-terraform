@@ -1,0 +1,232 @@
+############################
+# Make every rule wait until Config is recording
+############################
+# We reference the recorder status directly in each resource's depends_on.
+# (No locals needed.)
+
+############################
+# EKS: risky settings / drift
+############################
+
+resource "aws_config_config_rule" "eks_secrets_encrypted" {
+  name = "eks-secrets-encrypted"
+  source {
+    owner             = "AWS"
+    source_identifier = "EKS_SECRETS_ENCRYPTED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "eks_endpoint_no_public" {
+  name = "eks-endpoint-no-public-access"
+  source {
+    owner             = "AWS"
+    source_identifier = "EKS_ENDPOINT_NO_PUBLIC_ACCESS"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "eks_logging_enabled" {
+  name = "eks-cluster-logging-enabled"
+  source {
+    owner             = "AWS"
+    source_identifier = "EKS_CLUSTER_LOGGING_ENABLED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "eks_version_supported" {
+  name = "eks-cluster-supported-version"
+  source {
+    owner             = "AWS"
+    source_identifier = "EKS_CLUSTER_SUPPORTED_VERSION"
+  }
+  input_parameters = jsonencode({ oldestVersionSupported = "1.29" })
+  depends_on       = [aws_config_configuration_recorder_status.this]
+}
+
+############################
+# RDS: public access, encryption, deletion protection, Multi-AZ
+############################
+
+resource "aws_config_config_rule" "rds_no_public" {
+  name = "rds-instance-public-access-check"
+  source {
+    owner             = "AWS"
+    source_identifier = "RDS_INSTANCE_PUBLIC_ACCESS_CHECK"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "rds_encrypted" {
+  name = "rds-storage-encrypted"
+  source {
+    owner             = "AWS"
+    source_identifier = "RDS_STORAGE_ENCRYPTED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "rds_delete_protect_instance" {
+  name = "rds-instance-deletion-protection-enabled"
+  source {
+    owner             = "AWS"
+    source_identifier = "RDS_INSTANCE_DELETION_PROTECTION_ENABLED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "rds_delete_protect_cluster" {
+  name = "rds-cluster-deletion-protection-enabled"
+  source {
+    owner             = "AWS"
+    source_identifier = "RDS_CLUSTER_DELETION_PROTECTION_ENABLED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "rds_multi_az_instance" {
+  name = "rds-multi-az-support"
+  source {
+    owner             = "AWS"
+    source_identifier = "RDS_MULTI_AZ_SUPPORT"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "rds_multi_az_cluster" {
+  name = "rds-cluster-multi-az-enabled"
+  source {
+    owner             = "AWS"
+    source_identifier = "RDS_CLUSTER_MULTI_AZ_ENABLED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+############################
+# EBS / EFS / S3: encryption-at-rest
+############################
+
+resource "aws_config_config_rule" "ebs_encrypt_by_default" {
+  name = "ebs-encryption-by-default"
+  source {
+    owner             = "AWS"
+    source_identifier = "EBS_ENCRYPTION_BY_DEFAULT"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "efs_encrypted" {
+  name = "efs-encrypted-check"
+  source {
+    owner             = "AWS"
+    source_identifier = "EFS_ENCRYPTED_CHECK"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "s3_default_sse" {
+  name = "s3-bucket-server-side-encryption-enabled"
+  source {
+    owner             = "AWS"
+    source_identifier = "S3_BUCKET_SERVER_SIDE_ENCRYPTION_ENABLED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+############################
+# S3: public access checks
+############################
+
+resource "aws_config_config_rule" "s3_public_read_prohibited" {
+  name = "s3-bucket-public-read-prohibited"
+  source {
+    owner             = "AWS"
+    source_identifier = "S3_BUCKET_PUBLIC_READ_PROHIBITED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "s3_public_write_prohibited" {
+  name = "s3-bucket-public-write-prohibited"
+  source {
+    owner             = "AWS"
+    source_identifier = "S3_BUCKET_PUBLIC_WRITE_PROHIBITED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "s3_bucket_level_bpa" {
+  name = "s3-bucket-level-public-access-prohibited"
+  source {
+    owner             = "AWS"
+    source_identifier = "S3_BUCKET_LEVEL_PUBLIC_ACCESS_PROHIBITED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+############################
+# Security Group analysis
+############################
+
+resource "aws_config_config_rule" "restricted_common_ports" {
+  name = "restricted-common-ports"
+  source {
+    owner             = "AWS"
+    source_identifier = "RESTRICTED_INCOMING_TRAFFIC"
+  }
+  # Add more ports as blockedPort3..N if needed
+  input_parameters = jsonencode({ blockedPort1 = "22", blockedPort2 = "3389" })
+  depends_on       = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "default_sg_closed" {
+  name = "vpc-default-security-group-closed"
+  source {
+    owner             = "AWS"
+    source_identifier = "VPC_DEFAULT_SECURITY_GROUP_CLOSED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "no_ssh" {
+  name = "restricted-ssh"
+  source {
+    owner             = "AWS"
+    source_identifier = "INCOMING_SSH_DISABLED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "no_rdp" {
+  name = "restricted-rdp"
+  source {
+    owner             = "AWS"
+    source_identifier = "INCOMING_RDP_DISABLED"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+
+############################
+# Backup policy validation
+############################
+
+resource "aws_config_config_rule" "backup_min_retention" {
+  name = "backup-recovery-point-minimum-retention-check"
+  source {
+    owner             = "AWS"
+    source_identifier = "BACKUP_RECOVERY_POINT_MINIMUM_RETENTION_CHECK"
+  }
+  input_parameters = jsonencode({ requiredRetentionDays = "35" })
+  depends_on       = [aws_config_configuration_recorder_status.this]
+}
+
+resource "aws_config_config_rule" "s3_protected_by_backup" {
+  name = "s3-resources-protected-by-backup-plan"
+  source {
+    owner             = "AWS"
+    source_identifier = "S3_RESOURCES_PROTECTED_BY_BACKUP_PLAN"
+  }
+  depends_on = [aws_config_configuration_recorder_status.this]
+}
+

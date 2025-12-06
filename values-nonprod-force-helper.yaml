@@ -1,0 +1,44 @@
+# values-nonprod-force-helper.yaml
+gitlabUrl: "https://gitlab.credencys.net"
+runnerRegistrationToken: ""   # leave empty to reuse existing registration secret
+
+rbac:
+  create: true
+
+runners:
+  name: "nonprod-infra"
+  executor: "kubernetes"
+  runUntagged: false
+  locked: false
+  tags:
+    - nonprod-infra
+
+  # Force an explicit config.toml (this ensures the helper_image is embedded)
+  config: |
+    ## This is the config.toml content that the chart will create
+    [[runners]]
+      name = "nonprod-infra"
+      executor = "kubernetes"
+      environment = []
+      [runners.kubernetes]
+        namespace = "gitlab-runner"
+        service_account = "gitlab-runner-sa"
+        image = "alpine:3.18"
+        privileged = true
+        pull_policy = "IfNotPresent"
+        helper_image = "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper:arm64-v18.6.2"
+        # adjust image_pull_secrets if you use a private registry
+        # image_pull_secrets = ["my-registry-secret"]
+  kubernetes:
+    namespace: gitlab-runner
+    image: alpine:latest
+    pollTimeout: 300
+    privileged: true
+    pullPolicy: IfNotPresent
+
+  helperImage:
+    name: "registry.gitlab.com/gitlab-org/gitlab-runner/gitlab-runner-helper"
+    tag: "arm64-v18.6.2"
+
+concurrent: 5
+

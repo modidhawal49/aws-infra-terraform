@@ -1,0 +1,61 @@
+serviceAccount:
+  create: true
+  name: fluent-bit
+  annotations:
+    eks.amazonaws.com/role-arn: "${role_arn}"
+
+# Send container logs (/var/log/containers) to CloudWatch Logs
+cloudWatch:
+  enabled: true
+  region: "${region}"
+  logGroupName: "/aws/eks/${cluster_name}/workloads"
+  logStreamPrefix: "pod"
+  logRetentionDays: 0
+  autoCreateGroup: false
+
+# Send system logs (kubelet, containerd) to CloudWatch Logs
+# Useful for node-level debugging
+kubernetes:
+  enabled: true
+
+firehose:
+  enabled: false
+kinesis:
+  enabled: false
+elasticsearch:
+  enabled: false
+s3:
+  enabled: false
+
+# Inputs: container logs + systemd (kubelet/containerd)
+inputs:
+  tail:
+    enabled: true
+    path: /var/log/containers/*.log
+    parser: docker
+    refreshInterval: 10
+    memBufLimit: 5MB
+    skipLongLines: true
+    rotateWait: 5
+    dockerMode: true
+    dockerModeFlush: 5
+    decodeFieldAs: "json log"
+  systemd:
+    enabled: true
+    filters:
+      - kubelet
+      - containerd
+    # journal paths differ by AMI; the chart handles defaults on AL2/Bottlerocket/Ubuntu
+
+# Tolerations so it runs on all nodes (including tainted nodes)
+tolerations:
+  - operator: "Exists"
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "256Mi"
+
